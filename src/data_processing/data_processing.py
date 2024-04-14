@@ -7,7 +7,6 @@ from collections import Counter
 import json
 
 
-
 def clean_title(title):
     # Lowercase
     title = title.lower()
@@ -40,7 +39,6 @@ def tokenize_title(title, word_to_vec, tokenizer):
     return embeddings
 
 
-
 if __name__ == '__main__':
     nlp = spacy.load("en_core_web_sm")
     data = pd.read_csv("./raw_data/job_postings.csv")
@@ -53,4 +51,3 @@ if __name__ == '__main__':
     for title in data.title.to_numpy():
         emb = tokenize_title(title, word_to_vec, nlp)
         print(emb)
-
