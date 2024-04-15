@@ -1,8 +1,7 @@
 import csv
-from typing import List, Tuple, Any
 
-import torchtext
-from torchtext.data.utils import get_tokenizer
+import torch
+from torch.nn.functional import one_hot
 from torchtext.vocab import Vocab, build_vocab_from_iterator
 from typing import List, Tuple, Any
 
@@ -58,7 +57,9 @@ def clean_location(data: List[Tuple[List[Any], Any]], location_index: int) -> Li
     return cleaned_data
 
 
-def build_column_vocabulary(data: List[Tuple[List[str], Any]], column_index: int, min_freq: int = 1, specials: List[str] = ['<bos>', '<eos>', '<unk>', '<pad>']) -> Vocab:
+def build_column_vocabulary(data: List[Tuple[List[str], Any]],
+                            column_index: int, min_freq: int = 1,
+                            specials: List[str] = ['<bos>', '<eos>', '<unk>', '<pad>']) -> Vocab:
     """
     Builds a vocabulary for a specific column in the dataset, treating empty strings or None as <unk>.
 
@@ -75,12 +76,8 @@ def build_column_vocabulary(data: List[Tuple[List[str], Any]], column_index: int
     tokens = []
     for inputs, _ in data:
         if len(inputs) > column_index:
-            column_value = inputs[column_index]
-            # Treat empty strings or None as unknown
-            if column_value is None or column_value.strip() == '':
-                tokens.append('<unk>')
-            else:
-                tokens.append(column_value)
+            token = inputs[column_index].strip()
+            tokens.append(token if token else '<unk>')
         else:
             raise ValueError("column_index exceeds input size")
 
@@ -91,8 +88,28 @@ def build_column_vocabulary(data: List[Tuple[List[str], Any]], column_index: int
     return vocab
 
 
+def convert_to_one_hot(data: List[Tuple[List[str], Any]], vocabs: list[Tuple[int, Vocab]]):
+    """Convert data to one-hot vectors for each categorical field."""
+    converted_data = []
+    for record, label in data:
+        one_hot_vectors = []
+        for index, vocab in vocabs:
+            token = record[index].strip()
+            if token in vocab.get_stoi():
+                field_index = vocab.get_stoi()[token]
+            else:
+                field_index = vocab.get_default_index()  # Handle unknown tokens
 
-def accuracy(model, dataset: list[tuple]):
+            # Ensure the one-hot encoded vector is of type float
+            field_one_hot = one_hot(torch.tensor(field_index, dtype=torch.long), num_classes=len(vocab)).float()
+            one_hot_vectors.append(field_one_hot)
+
+        combined_one_hot = torch.cat(one_hot_vectors)
+        converted_data.append((combined_one_hot, float(label)))
+    return converted_data
+
+
+def accuracy(model, dataset: list[tuple]) -> float:
     """
     copied from csc413 lab 1
     Compute the accuracy of `model` over the `dataset`.
@@ -114,7 +131,9 @@ def accuracy(model, dataset: list[tuple]):
     distance = 0
     for x, t in dataset:
         z = model(x)
-        distance += abs(t-z)
+        z = z.item()
+        t = t
+        distance += float(abs(t-z))
         total += 1
 
     return distance / total
