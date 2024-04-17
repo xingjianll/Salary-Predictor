@@ -2,7 +2,9 @@ import csv
 
 import torch
 from matplotlib import pyplot as plt
+from torch import Tensor
 from torch.nn.functional import one_hot
+from torch.utils.data import Dataset
 from torchtext.vocab import Vocab, build_vocab_from_iterator
 from typing import List, Tuple, Any
 
@@ -89,8 +91,9 @@ def build_column_vocabulary(data: List[Tuple[List[str], Any]],
     return vocab
 
 
-def convert_to_one_hot(data: List[Tuple[List[str], Any]], vocabs: list[Tuple[int, Vocab]]):
-    """Convert data to one-hot vectors for each categorical field."""
+def convert_to_one_hot(data: List[Tuple[List[str], Any]], vocabs: List[Tuple[int, Vocab]])\
+        -> List[Tuple[List[Tensor], Any]]:
+    """Convert data to one-hot vectors for each categorical field, maintaining structure."""
     converted_data = []
     for record, label in data:
         one_hot_vectors = []
@@ -105,12 +108,12 @@ def convert_to_one_hot(data: List[Tuple[List[str], Any]], vocabs: list[Tuple[int
             field_one_hot = one_hot(torch.tensor(field_index, dtype=torch.long), num_classes=len(vocab)).float()
             one_hot_vectors.append(field_one_hot)
 
-        combined_one_hot = torch.cat(one_hot_vectors)
-        converted_data.append((combined_one_hot, float(label)))
+        # Store the list of one-hot vectors instead of concatenating them
+        converted_data.append((one_hot_vectors, float(label)))
     return converted_data
 
 
-def accuracy(model, dataset: list[tuple]) -> float:
+def accuracy(model, dataset: Dataset) -> float:
     """
     copied from csc413 lab 1
     Compute the accuracy of `model` over the `dataset`.

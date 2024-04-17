@@ -1,9 +1,25 @@
+from typing import List, Any, Tuple
+
 import torch
 import torch.nn as nn
-from torch import optim
-from torch.utils.data import DataLoader
+from torch import optim, Tensor
+from torch.utils.data import DataLoader, Dataset
 from src.models.utils import accuracy, plot_results
-import matplotlib.pyplot as plt
+
+
+class MLPDataset(Dataset):
+    def __init__(self, data: List[Tuple[List[Tensor], Any]]):
+        # Data is a list of tuples, where each tuple is (list of one-hot vectors, label)
+        self.data = data
+
+    def __getitem__(self, idx: int):
+        one_hot_vectors, label = self.data[idx]
+        # Combine the individual feature tensors into a single tensor before passing it to the model
+        categorical_features = torch.cat(one_hot_vectors)  # Concatenation along the feature dimension
+        return categorical_features, label
+
+    def __len__(self):
+        return len(self.data)
 
 
 class MLP(nn.Module):
@@ -29,7 +45,14 @@ def _collate_batch(batch):
     return inputs, labels
 
 
-def train_model(model, train_data, val_data, learning_rate=0.01, batch_size=100, num_epochs=10, plot_every=50, plot=True):
+def train_model(model,
+                train_data: MLPDataset,
+                val_data: MLPDataset,
+                learning_rate=0.01,
+                batch_size=100,
+                num_epochs=10,
+                plot_every=50,
+                plot=True):
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=_collate_batch)
 
     criterion = nn.MSELoss()
