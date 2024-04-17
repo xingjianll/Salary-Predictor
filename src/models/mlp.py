@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader
-from src.models.utils import accuracy
+from src.models.utils import accuracy, plot_results
 import matplotlib.pyplot as plt
 
 
@@ -58,13 +58,3 @@ def train_model(model, train_data, val_data, learning_rate=0.01, batch_size=100,
     if plot:
         plot_results(iters, train_losses, val_losses)
 
-
-def plot_results(iters, train_losses, val_losses):
-    plt.figure(figsize=(10, 5))
-    plt.plot(iters, train_losses, label='Train Loss')
-    plt.plot(iters, val_losses, label='Validation Loss')
-    plt.xlabel('Iterations')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Loss over Iterations')
-    plt.legend()
-    plt.show()

@@ -1,6 +1,7 @@
 import csv
 
 import torch
+from matplotlib import pyplot as plt
 from torch.nn.functional import one_hot
 from torchtext.vocab import Vocab, build_vocab_from_iterator
 from typing import List, Tuple, Any
@@ -58,8 +59,8 @@ def clean_location(data: List[Tuple[List[Any], Any]], location_index: int) -> Li
 
 
 def build_column_vocabulary(data: List[Tuple[List[str], Any]],
-                            column_index: int, min_freq: int = 1,
-                            specials: List[str] = ['<bos>', '<eos>', '<unk>', '<pad>']) -> Vocab:
+                            column_index: int, min_freq: int = 0,
+                            specials: List[str] = ['<unk>']) -> Vocab:
     """
     Builds a vocabulary for a specific column in the dataset, treating empty strings or None as <unk>.
 
@@ -138,3 +139,13 @@ def accuracy(model, dataset: list[tuple]) -> float:
 
     return distance / total
 
+
+def plot_results(iters, train_losses, val_losses):
+    plt.figure(figsize=(10, 5))
+    plt.plot(iters, train_losses, label='Train Loss')
+    plt.plot(iters, val_losses, label='Validation Loss')
+    plt.xlabel('Iterations')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss over Iterations')
+    plt.legend()
+    plt.show()

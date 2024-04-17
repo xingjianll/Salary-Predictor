@@ -27,7 +27,8 @@ def standardize_salary(row):
 # Clean the descriptions
 def clean_description(description, tokenizer):
     description = description.lower()
-    description = re.sub(r'[^a-zA-Z0-9\s]', ' ', description)
+    description = re.sub(r'[^a-zA-Z0-9\s]', '', description)
+    description = re.sub('\\s+', ' ', description)
     doc = tokenizer(description)
     tokens = [token.text for token in doc]
     return ' '.join(tokens)
@@ -39,7 +40,7 @@ vocab_size = 400
 def clean_title(title, tokenizer):
     # Lowercase
     title = title.lower()
-    # Remove special characters and numbers
+    # Remove special characters
     title = re.sub(r'[^a-zA-Z0-9\s]', ' ', title)
     # Remove multiple spaces
     title = re.sub('\\s+', ' ', title)
