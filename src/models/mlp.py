@@ -8,17 +8,16 @@ from src.models.utils import accuracy, plot_results
 
 
 class MLPDataset(Dataset):
-    def __init__(self, categorical_features: List[List[Tensor]], labels: List[float]):
+    def __init__(self, categorical_features: List[Tensor], labels: List[float]):
         # Data is a list of tuples, where each tuple is (list of one-hot vectors, label)
         self.categorical_features = categorical_features
         self.labels = labels
 
     def __getitem__(self, idx: int) -> tuple[Tensor, float]:
-        one_hot_vectors = self.categorical_features[idx]
+        categorical_feature = self.categorical_features[idx]
         label = self.labels[idx]
         # Combine the individual feature tensors into a single tensor before passing it to the model
-        categorical_features = torch.cat(one_hot_vectors)  # Concatenation along the feature dimension
-        return categorical_features, label
+        return categorical_feature, label
 
     def __len__(self):
         return len(self.categorical_features)
