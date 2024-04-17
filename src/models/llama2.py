@@ -1,4 +1,6 @@
-from torch import nn, optim
+from typing import List
+
+from torch import nn, optim, Tensor
 from torch.utils.data import Dataset
 from transformers import AutoModel
 from peft import LoraConfig
@@ -7,17 +9,17 @@ import torch
 from src.models.utils import plot_results
 
 
-class SalaryDataset(Dataset):
-    def __init__(self, encodings, categorical_features, labels):
-        self.encodings = encodings
+class Llama2Dataset(Dataset):
+    def __init__(self, text_encodings, categorical_features: List[List[Tensor]], labels: List[float]):
+        self.text_encodings = text_encodings
         self.categorical_features = categorical_features
         self.labels = labels
 
     def __getitem__(self, idx):
-        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
-        item['categorical_features'] = torch.tensor(self.categorical_features[idx], dtype=torch.float32)
-        item['labels'] = torch.tensor(self.labels[idx], dtype=torch.float32)
-        return item
+        one_hot_vectors = self.categorical_features[idx]
+        label = self.labels[idx]
+        categorical_features = torch.cat(one_hot_vectors)  # Concatenation along the feature dimension
+        return categorical_features, label
 
     def __len__(self):
         return len(self.labels)

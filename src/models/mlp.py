@@ -8,18 +8,20 @@ from src.models.utils import accuracy, plot_results
 
 
 class MLPDataset(Dataset):
-    def __init__(self, data: List[Tuple[List[Tensor], Any]]):
+    def __init__(self, categorical_features: List[List[Tensor]], labels: List[float]):
         # Data is a list of tuples, where each tuple is (list of one-hot vectors, label)
-        self.data = data
+        self.categorical_features = categorical_features
+        self.labels = labels
 
-    def __getitem__(self, idx: int):
-        one_hot_vectors, label = self.data[idx]
+    def __getitem__(self, idx: int) -> tuple[Tensor, float]:
+        one_hot_vectors = self.categorical_features[idx]
+        label = self.labels[idx]
         # Combine the individual feature tensors into a single tensor before passing it to the model
         categorical_features = torch.cat(one_hot_vectors)  # Concatenation along the feature dimension
         return categorical_features, label
 
     def __len__(self):
-        return len(self.data)
+        return len(self.categorical_features)
 
 
 class MLP(nn.Module):
@@ -75,9 +77,8 @@ def train_model(model,
                 iters.append(iter_count)
                 train_losses.append(accuracy(model, train_data))
                 val_losses.append(accuracy(model, val_data))
-                print(f"Iteration {iter_count+1}: Train Loss {train_losses[-1]}, Validation Loss {val_losses[-1]}")
+                print(f"Iteration {iter_count + 1}: Train Loss {train_losses[-1]}, Validation Loss {val_losses[-1]}")
             iter_count += 1
 
     if plot:
         plot_results(iters, train_losses, val_losses)
-

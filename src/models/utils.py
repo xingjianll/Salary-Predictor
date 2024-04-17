@@ -92,7 +92,7 @@ def build_column_vocabulary(data: List[Tuple[List[str], Any]],
 
 
 def convert_to_one_hot(data: List[Tuple[List[str], Any]], vocabs: List[Tuple[int, Vocab]])\
-        -> List[Tuple[List[Tensor], Any]]:
+        -> List[List[Tensor]]:
     """Convert data to one-hot vectors for each categorical field, maintaining structure."""
     converted_data = []
     for record, label in data:
@@ -109,7 +109,7 @@ def convert_to_one_hot(data: List[Tuple[List[str], Any]], vocabs: List[Tuple[int
             one_hot_vectors.append(field_one_hot)
 
         # Store the list of one-hot vectors instead of concatenating them
-        converted_data.append((one_hot_vectors, float(label)))
+        converted_data.append(one_hot_vectors)
     return converted_data
 
 
