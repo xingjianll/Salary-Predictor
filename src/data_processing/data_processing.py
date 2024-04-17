@@ -25,19 +25,22 @@ def standardize_salary(row):
 
 
 # Clean the descriptions
-def clean_description(description, nlp):
-    doc = nlp(description)
-    tokens = [token.lemma_ for token in doc if token.is_alpha and not token.is_stop]
+def clean_description(description, tokenizer):
+    description = description.lower()
+    description = re.sub(r'[^a-zA-Z0-9\s]', ' ', description)
+    doc = tokenizer(description)
+    tokens = [token.text for token in doc]
     return ' '.join(tokens)
 
 
-vocab_size = 200
+vocab_size = 400
+
 
 def clean_title(title, tokenizer):
     # Lowercase
     title = title.lower()
     # Remove special characters and numbers
-    title = re.sub('[^A-Za-z ]+', ' ', title)
+    title = re.sub(r'[^a-zA-Z0-9\s]', ' ', title)
     # Remove multiple spaces
     title = re.sub('\\s+', ' ', title)
     title = ' '.join([w.text for w in tokenizer(title) if not w.is_stop])
