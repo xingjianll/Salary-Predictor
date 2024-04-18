@@ -1,5 +1,6 @@
 src/data_processing/raw_data
 src/data
+src/models/__pycache__
 data_processing/raw_data
 .idea
 venv

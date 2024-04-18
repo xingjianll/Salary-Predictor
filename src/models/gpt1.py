@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import OpenAIGPTModel
 import torch
 
-from src.models.utils import accuracy, plot_results
+from utils import accuracy, plot_results
 
 
 class GPT1Dataset(Dataset):
@@ -78,6 +78,10 @@ def train_model(model,
                 num_epochs=10,
                 plot_every=50,
                 plot=True):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    model.to(device)
+
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=_collate_batch)
 
     criterion = nn.MSELoss()
@@ -89,12 +93,19 @@ def train_model(model,
     for epoch in range(num_epochs):
         model.train()
         for input_ids, attention_mask, categorical_features, label in train_loader:
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
+            categorical_features = categorical_features.to(device)
+            label = label.to(device)
+
             optimizer.zero_grad()
             outputs = model(input_ids, attention_mask, categorical_features)
             outputs = outputs.squeeze()
             loss = criterion(outputs, label.float())
             loss.backward()
             optimizer.step()
+
+            torch.cuda.empty_cache()
 
             if (iter_count + 1) % plot_every == 0:
                 iters.append(iter_count)
