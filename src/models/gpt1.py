@@ -82,6 +82,8 @@ def train_model(model,
                 plot_every=50,
                 plot=True):
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=_collate_batch)
+    train_loader2 = DataLoader(train_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
+    val_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
 
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -109,8 +111,8 @@ def train_model(model,
             if (iter_count + 1) % plot_every == 0:
                 iters.append(iter_count)
                 losses.append(float(loss))
-                train_mae.append(accuracy(model, train_data))
-                val_mae.append(accuracy(model, val_data))
+                train_mae.append(calculate_mae(model, train_loader2))
+                val_mae.append(calculate_mae(model, val_loader))
                 print(
                     f"Iter {iter_count + 1}: Loss: {losses[-1]} Train mae {train_mae[-1]}, Validation mae {val_mae[-1]}")
             iter_count += 1
@@ -119,41 +121,27 @@ def train_model(model,
         plot_results(iters, losses, train_mae, val_mae)
 
 
-def accuracy(model, dataset: Dataset) -> float:
+def calculate_mae(model, dataloader: DataLoader) -> float:
     """
-    copied from csc413 lab 1
-    Compute the accuracy of `model` over the `dataset`.
-    We will take the **most probable class**
-    as the class predicted by the model.
+    Calculate the mean absolute error for a model over a given dataloader.
 
-    Parameters:
-        `model` - A torch.nn model. We will only be passing `nn.Linear` models.
-                  However, to make your code more generally useful, do not access
-                  `model.weight` and `model.bias` parameters directly. These
-                  class attributes may not exist for other kinds of models.
-        `dataset` - A list of 2-tuples of the form (x, t), where `x` is a PyTorch
-                  tensor of shape [1, 28, 28] representing an MNIST image,
-                  and `t` is the corresponding target label
+    Args:
+        model: The model to evaluate.
+        dataloader (DataLoader): The DataLoader containing the dataset.
 
-    Returns: a floating-point value between 0 and 1.
+    Returns:
+        float: The mean absolute error of the model.
     """
-    total = 0
-    distance = 0
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = model.to(device)
+    total_distance = 0
+    total_count = 0
 
-    for i in range(500):
-        data = dataset[i]
+    with torch.no_grad():
+        for input_ids, attention_mask, categorical_features, labels in dataloader:
+            outputs = model(input_ids, attention_mask, categorical_features)
+            outputs = outputs.squeeze()  # Adjust shape if necessary
 
-        input_ids = data['input_ids'].unsqueeze(0)
-        attention_mask = data['attention_mask'].unsqueeze(0)
-        categorical_features = data['categorical_features'].unsqueeze(0)
-        label = data['labels']
+            distances = torch.abs(labels - outputs)
+            total_distance += distances.sum().item()
+            total_count += labels.size(0)
 
-        output = model(input_ids, attention_mask, categorical_features)
-        output = output.item()
-
-        distance += float(abs(label-output))
-        total += 1
-
-    return distance / total
+    return total_distance / total_count
