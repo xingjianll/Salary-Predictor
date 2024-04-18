@@ -78,11 +78,12 @@ def train_model(model,
                 val_data: GPT1Dataset,
                 learning_rate=0.01,
                 batch_size=100,
+                eval_batch_size=100,
                 num_epochs=10,
                 plot_every=50,
                 plot=True):
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=_collate_batch)
-    train_loader2 = DataLoader(train_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
+    train_loader2 = DataLoader(train_data, batch_size=eval_batch_size, shuffle=False, collate_fn=_collate_batch)
     val_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
 
     criterion = nn.MSELoss()
@@ -105,8 +106,6 @@ def train_model(model,
             loss = criterion(outputs, label.float())
             loss.backward()
             optimizer.step()
-
-            torch.cuda.empty_cache()
 
             if (iter_count + 1) % plot_every == 0:
                 iters.append(iter_count)
