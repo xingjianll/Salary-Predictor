@@ -22,7 +22,7 @@ def read_csv_data(file_location: str, input_columns: List[str], target_column: s
         List[Tuple[List[Any], Any]]: Each tuple contains a list of input values and the target value.
     """
     data = []
-    with open(file_location, mode='r', newline='') as file:
+    with open(file_location, mode='r', newline='', encoding='utf-8') as file:
         csv_reader = csv.DictReader(file)
         for row in csv_reader:
             inputs = [row[col] for col in input_columns if col in row]
