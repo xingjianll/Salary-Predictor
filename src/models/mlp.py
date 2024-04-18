@@ -1,4 +1,4 @@
-from typing import List, Any, Tuple
+from typing import List
 
 import torch
 import torch.nn as nn
@@ -59,7 +59,7 @@ def train_model(model,
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    iters, losses, train_losses, val_losses = [], [], [], []
+    iters, losses, train_mae, val_mae = [], [], [], []
     iter_count = 0
 
     for epoch in range(num_epochs):
@@ -74,10 +74,11 @@ def train_model(model,
 
             if (iter_count + 1) % plot_every == 0:
                 iters.append(iter_count)
-                train_losses.append(accuracy(model, train_data))
-                val_losses.append(accuracy(model, val_data))
-                print(f"Iteration {iter_count + 1}: Train Loss {train_losses[-1]}, Validation Loss {val_losses[-1]}")
+                losses.append(float(loss))
+                train_mae.append(accuracy(model, train_data))
+                val_mae.append(accuracy(model, val_data))
+                print(f"Iter {iter_count + 1}: Loss: {losses[-1]} Train mae {train_mae[-1]}, Validation mae {val_mae[-1]}")
             iter_count += 1
 
     if plot:
-        plot_results(iters, train_losses, val_losses)
+        plot_results(iters, losses, train_mae, val_mae)

@@ -164,12 +164,20 @@ def accuracy(model, dataset: Dataset) -> float:
     return distance / total
 
 
-def plot_results(iters, train_losses, val_losses):
+def plot_results(iters, train_loss, train_mae, val_mae):
+    # plt.figure(figsize=(10, 5))
+    # plt.plot(iters, train_loss, label='Train loss')
+    # plt.xlabel('Iterations')
+    # plt.ylabel('MAE')
+    # plt.title('Training and Validation MAE over Iterations')
+    # plt.legend()
+    # plt.show()
+
     plt.figure(figsize=(10, 5))
-    plt.plot(iters, train_losses, label='Train Loss')
-    plt.plot(iters, val_losses, label='Validation Loss')
+    plt.plot(iters, train_mae, label='Train MAE')
+    plt.plot(iters, val_mae, label='Validation MAE')
     plt.xlabel('Iterations')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Loss over Iterations')
+    plt.ylabel('MAE')
+    plt.title('Training and Validation MAE over Iterations')
     plt.legend()
     plt.show()
