@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import OpenAIGPTModel
 import torch
 
-from utils import accuracy, plot_results
+from utils import plot_results
 
 
 class GPT1Dataset(Dataset):
@@ -58,6 +58,9 @@ class GPT1(nn.Module):
         return x
 
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
 def _collate_batch(batch):
     """Custom collate function for handling batches of data where all input tensors are of the same length."""
 
@@ -65,7 +68,7 @@ def _collate_batch(batch):
     input_ids = torch.stack([item['input_ids'] for item in batch])
     attention_mask = torch.stack([item['attention_mask'] for item in batch])
     categorical_features = torch.stack([item['categorical_features'] for item in batch]).float()
-    labels = torch.tensor([item['labels'] for item in batch], dtype=torch.float)
+    labels = torch.tensor([item['labels'] for item in batch], dtype=torch.float).to(device)
 
     return input_ids, attention_mask, categorical_features, labels
 
@@ -78,11 +81,9 @@ def train_model(model,
                 num_epochs=10,
                 plot_every=50,
                 plot=True):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    model.to(device)
-
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=_collate_batch)
+    train_loader2 = DataLoader(train_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
+    val_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
 
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -93,10 +94,10 @@ def train_model(model,
     for epoch in range(num_epochs):
         model.train()
         for input_ids, attention_mask, categorical_features, label in train_loader:
-            input_ids = input_ids.to(device)
-            attention_mask = attention_mask.to(device)
-            categorical_features = categorical_features.to(device)
-            label = label.to(device)
+            input_ids = input_ids
+            attention_mask = attention_mask
+            categorical_features = categorical_features
+            label = label
 
             optimizer.zero_grad()
             outputs = model(input_ids, attention_mask, categorical_features)
@@ -110,11 +111,37 @@ def train_model(model,
             if (iter_count + 1) % plot_every == 0:
                 iters.append(iter_count)
                 losses.append(float(loss))
-                train_mae.append(accuracy(model, train_data))
-                val_mae.append(accuracy(model, val_data))
+                train_mae.append(calculate_mae(model, train_loader2))
+                val_mae.append(calculate_mae(model, val_loader))
                 print(
                     f"Iter {iter_count + 1}: Loss: {losses[-1]} Train mae {train_mae[-1]}, Validation mae {val_mae[-1]}")
             iter_count += 1
 
     if plot:
         plot_results(iters, losses, train_mae, val_mae)
+
+
+def calculate_mae(model, dataloader: DataLoader) -> float:
+    """
+    Calculate the mean absolute error for a model over a given dataloader.
+
+    Args:
+        model: The model to evaluate.
+        dataloader (DataLoader): The DataLoader containing the dataset.
+
+    Returns:
+        float: The mean absolute error of the model.
+    """
+    total_distance = 0
+    total_count = 0
+
+    with torch.no_grad():
+        for input_ids, attention_mask, categorical_features, labels in dataloader:
+            outputs = model(input_ids, attention_mask, categorical_features)
+            outputs = outputs.squeeze()  # Adjust shape if necessary
+
+            distances = torch.abs(labels - outputs)
+            total_distance += distances.sum().item()
+            total_count += labels.size(0)
+
+    return total_distance / total_count
