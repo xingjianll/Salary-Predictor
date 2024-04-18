@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import OpenAIGPTModel
 import torch
 
-from utils import accuracy, plot_results
+from utils import plot_results
 
 
 class GPT1Dataset(Dataset):
@@ -58,6 +58,9 @@ class GPT1(nn.Module):
         return x
 
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
 def _collate_batch(batch):
     """Custom collate function for handling batches of data where all input tensors are of the same length."""
 
@@ -65,7 +68,7 @@ def _collate_batch(batch):
     input_ids = torch.stack([item['input_ids'] for item in batch])
     attention_mask = torch.stack([item['attention_mask'] for item in batch])
     categorical_features = torch.stack([item['categorical_features'] for item in batch]).float()
-    labels = torch.tensor([item['labels'] for item in batch], dtype=torch.float)
+    labels = torch.tensor([item['labels'] for item in batch], dtype=torch.float).to(device)
 
     return input_ids, attention_mask, categorical_features, labels
 
@@ -78,10 +81,6 @@ def train_model(model,
                 num_epochs=10,
                 plot_every=50,
                 plot=True):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    model.to(device)
-
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=_collate_batch)
 
     criterion = nn.MSELoss()
@@ -93,10 +92,10 @@ def train_model(model,
     for epoch in range(num_epochs):
         model.train()
         for input_ids, attention_mask, categorical_features, label in train_loader:
-            input_ids = input_ids.to(device)
-            attention_mask = attention_mask.to(device)
-            categorical_features = categorical_features.to(device)
-            label = label.to(device)
+            input_ids = input_ids
+            attention_mask = attention_mask
+            categorical_features = categorical_features
+            label = label
 
             optimizer.zero_grad()
             outputs = model(input_ids, attention_mask, categorical_features)
@@ -118,3 +117,43 @@ def train_model(model,
 
     if plot:
         plot_results(iters, losses, train_mae, val_mae)
+
+
+def accuracy(model, dataset: Dataset) -> float:
+    """
+    copied from csc413 lab 1
+    Compute the accuracy of `model` over the `dataset`.
+    We will take the **most probable class**
+    as the class predicted by the model.
+
+    Parameters:
+        `model` - A torch.nn model. We will only be passing `nn.Linear` models.
+                  However, to make your code more generally useful, do not access
+                  `model.weight` and `model.bias` parameters directly. These
+                  class attributes may not exist for other kinds of models.
+        `dataset` - A list of 2-tuples of the form (x, t), where `x` is a PyTorch
+                  tensor of shape [1, 28, 28] representing an MNIST image,
+                  and `t` is the corresponding target label
+
+    Returns: a floating-point value between 0 and 1.
+    """
+    total = 0
+    distance = 0
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
+
+    for i in range(500):
+        data = dataset[i]
+
+        input_ids = data['input_ids'].unsqueeze(0)
+        attention_mask = data['attention_mask'].unsqueeze(0)
+        categorical_features = data['categorical_features'].unsqueeze(0)
+        label = data['labels']
+
+        output = model(input_ids, attention_mask, categorical_features)
+        output = output.item()
+
+        distance += float(abs(label-output))
+        total += 1
+
+    return distance / total
