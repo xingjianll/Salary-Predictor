@@ -107,12 +107,32 @@ def convert_to_one_hot(data: List[Tuple[List[str], Any]], vocabs: List[Tuple[int
             # Ensure the one-hot encoded vector is of type float
             field_one_hot = one_hot(torch.tensor(field_index, dtype=torch.long), num_classes=len(vocab)).float()
             one_hot_vectors.append(field_one_hot)
-
         one_hot_vectors = torch.cat(one_hot_vectors)
         # Store the list of one-hot vectors instead of concatenating them
         converted_data.append(one_hot_vectors)
     return converted_data
 
+# def convert_to_one_hot(data, vocabs):
+#     converted_data = []
+#     # Assuming all records need the same number of classes in one-hot encoding
+#     num_classes = {i: len(vocab) for i, vocab in enumerate(vocabs)}
+
+#     for record, _ in data:
+#         one_hot_vectors = []
+#         for index, vocab in vocabs:
+#             token = record[index].strip()
+#             field_index = vocab.get_stoi().get(token, vocab.get_default_index())
+#             one_hot_vector = F.one_hot(torch.tensor(field_index), num_classes=num_classes[index]).float()
+#             one_hot_vectors.append(one_hot_vector)
+
+#         # Ensure all vectors are the same size
+#         max_len = max([v.size(0) for v in one_hot_vectors])
+#         one_hot_vectors = [F.pad(v, (0, max_len - v.size(0)), "constant", 0) for v in one_hot_vectors]
+#         concatenated_vector = torch.cat(one_hot_vectors, dim=0)
+#         converted_data.append(concatenated_vector)
+
+#     # Stack along a new dimension
+#     return torch.stack(converted_data)
 
 def accuracy(model, dataset: Dataset) -> float:
     """

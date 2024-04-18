@@ -50,6 +50,7 @@ class GPT1(nn.Module):
     def forward(self, input_ids, attention_mask, categorical_features):
         # Process textual input through GPT
         outputs = self.gpt(input_ids=input_ids, attention_mask=attention_mask)
+
         text_features = outputs.last_hidden_state[:, -1, :]  # Use the last token's representation
 
         # Concatenate text features with categorical features
@@ -60,7 +61,7 @@ class GPT1(nn.Module):
         x = self.dropout(x)
         x = self.output(x)
 
-        return x
+        return x.squeeze() 
 
     def prepare_inputs_for_generation(self, haha1: torch.LongTensor, **kwargs) -> Dict[str, Any]:
         """
@@ -72,16 +73,14 @@ class GPT1(nn.Module):
 
 def collate_batch(batch):
     """Custom collate function for handling batches of data where all input tensors are of the same length."""
+
     # Separate and stack the data directly since all tensors are already of the same length
     input_ids = torch.stack([item['input_ids'] for item in batch])
     attention_masks = torch.stack([item['attention_mask'] for item in batch])
     categorical_features = torch.stack([item['categorical_features'] for item in batch])
-    # labels = torch.tensor([item['labels'] for item in batch], dtype=torch.float)
 
-    # Return the batch in a dictionary with tensors ready for model input
     return {
         'input_ids': input_ids,
         'attention_mask': attention_masks,
         'categorical_features': categorical_features,
-        # 'labels': labels
     }
