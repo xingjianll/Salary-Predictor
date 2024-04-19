@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import OpenAIGPTModel
 import torch
 
-from utils import plot_results
+from utils import accuracy, plot_results
 
 
 class GPT1Dataset(Dataset):
@@ -56,6 +56,43 @@ class GPT1(nn.Module):
         x = self.output(x)
 
         return x
+    
+
+class GPT1_3LL(nn.Module):
+    def __init__(self, num_categorical_features):
+        super(GPT1, self).__init__()
+
+        self.gpt = OpenAIGPTModel.from_pretrained("openai-gpt")
+
+        self.relu = nn.ReLU()
+        self.fc1 = nn.Linear(self.gpt.config.hidden_size + num_categorical_features, 500)
+        self.fc2 = nn.Linear(self.gpt.config.hidden_size + num_categorical_features, 250)
+        self.fc3 = nn.Linear(self.gpt.config.hidden_size + num_categorical_features, 100)
+        self.dropout = nn.Dropout(0.1)
+        self.output = nn.Linear(100, 1)  # Output layer for salary prediction
+
+    def forward(self, input_ids, attention_mask, categorical_features):
+        # Process textual input through GPT
+        outputs = self.gpt(input_ids=input_ids, attention_mask=attention_mask)
+
+        text_features = outputs.last_hidden_state[:, -1, :]  # Use the last token's representation
+
+        # Concatenate text features with categorical features
+        combined_features = torch.cat((text_features, categorical_features), dim=1)
+        combined_features = self.fc1(combined_features)
+        x = self.relu(combined_features)
+
+        x = self.fc2(x)
+        x = self.relu(x)
+        x = self.fc3(x)
+        x = self.relu(x)
+
+        x = self.dropout(x)
+        x = self.output(x)
+
+        return x
+
+
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -84,7 +121,7 @@ def train_model(model,
                 plot=True):
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=_collate_batch)
     train_loader2 = DataLoader(train_data, batch_size=eval_batch_size, shuffle=False, collate_fn=_collate_batch)
-    val_loader = DataLoader(train_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
+    val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
 
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -106,6 +143,8 @@ def train_model(model,
             loss = criterion(outputs, label.float())
             loss.backward()
             optimizer.step()
+
+            torch.cuda.empty_cache()
 
             if (iter_count + 1) % plot_every == 0:
                 iters.append(iter_count)
@@ -142,5 +181,7 @@ def calculate_mae(model, dataloader: DataLoader) -> float:
             distances = torch.abs(labels - outputs)
             total_distance += distances.sum().item()
             total_count += labels.size(0)
+            if total_count >= 1500:
+                break
 
     return total_distance / total_count

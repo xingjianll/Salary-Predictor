@@ -160,7 +160,7 @@ def accuracy(model, dataset: Dataset) -> float:
         t = t
         distance += float(abs(t-z))
         total += 1
-        if total == 500:
+        if total == 3000:
             break
 
     return distance / total
