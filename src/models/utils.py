@@ -117,6 +117,9 @@ def cat_emb(one_hot, data, emb_idx):
     for i in range(len(data)):
         strings = data[i][0][emb_idx].replace('[', '').replace(']', '').replace('\n', '').split()
         floats = torch.tensor([float(item) for item in strings])
+        print(floats)
+        print(floats.shape)
+        break
         tensor = torch.cat((one_hot[i], floats))
         results.append(tensor)
     return results

@@ -15,10 +15,11 @@ class Bert(nn.Module):
 
         self.bert = AutoModel.from_pretrained("bert-base-uncased", config=config)
 
-        self.fc1 = nn.Linear(config.hidden_size + num_categorical_features, hidden_size)
+        self.linear1 = nn.Linear(config.hidden_size + num_categorical_features, hidden_size)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(dropout)
-        self.output = nn.Linear(hidden_size, output_size)  # Output layer for salary prediction
+        self.dropout = nn.Dropout(0.1)
+        self.linear2 = nn.Linear(hidden_size, hidden_size)
+        self.output = nn.Linear(hidden_size, output_size)
 
     def forward(self, input_ids, attention_mask, categorical_features):
         # Process textual input through GPT
@@ -30,12 +31,12 @@ class Bert(nn.Module):
         pooled_output = self.dropout(pooled_output)  # (bs, dim)
 
         # Concatenate text features with categorical features
-        combined_features = torch.cat((pooled_output, categorical_features), dim=1)
-        combined_features = self.fc1(combined_features)
-
-        x = self.relu(combined_features)
+        x = torch.cat((pooled_output, categorical_features), dim=1)
+        x = self.linear1(x)
+        x = self.relu(x)
         x = self.dropout(x)
-        
+        x = self.linear2(x)
+        x = self.relu(x)
+        x = self.dropout(x)
         x = self.output(x)
-
         return x
