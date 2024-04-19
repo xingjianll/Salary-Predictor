@@ -28,19 +28,16 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.linear1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.1)
-        self.linear2 = nn.Linear(hidden_size, hidden_size)
+        self.dropout = nn.Dropout(0.3)
         self.output = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
         x = self.linear1(x)
         x = self.relu(x)
         x = self.dropout(x)
-        x = self.linear2(x)
-        x = self.relu(x)
-        x = self.dropout(x)
         x = self.output(x)
         return x
+
 
 class MLP_classifier(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes):
@@ -61,6 +58,7 @@ class MLP_classifier(nn.Module):
         x = self.output(x)
         return x
 
+
 def _collate_batch(batch):
     """Collate batch of data."""
     inputs = torch.stack([item[0] for item in batch]).float()
@@ -69,13 +67,13 @@ def _collate_batch(batch):
 
 
 def train_classifier(model,
-                train_data: MLPDataset,
-                val_data: MLPDataset,
-                learning_rate=0.01,
-                batch_size=100,
-                num_epochs=10,
-                plot_every=50,
-                plot=True):
+                     train_data: MLPDataset,
+                     val_data: MLPDataset,
+                     learning_rate=0.01,
+                     batch_size=100,
+                     num_epochs=10,
+                     plot_every=50,
+                     plot=True):
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=_collate_batch)
 
     criterion = nn.CrossEntropyLoss()
@@ -99,12 +97,12 @@ def train_classifier(model,
                 losses.append(float(loss))
                 train_accuracy.append(accuracy(model, train_data))
                 val_accuracy.append(accuracy(model, val_data))
-                print(f"Iter {iter_count + 1}: Loss: {losses[-1]} Train Acc: {train_accuracy[-1]}, Validation Acc: {val_accuracy[-1]}")
+                print(
+                    f"Iter {iter_count + 1}: Loss: {losses[-1]} Train Acc: {train_accuracy[-1]}, Validation Acc: {val_accuracy[-1]}")
             iter_count += 1
 
     if plot:
         plot_results(iters, losses, train_accuracy, val_accuracy)
-
 
 
 def train_model(model,
@@ -139,7 +137,8 @@ def train_model(model,
                 losses.append(float(loss))
                 train_mae.append(mae(model, train_data))
                 val_mae.append(mae(model, val_data))
-                print(f"Iter {iter_count + 1}: Loss: {losses[-1]} Train mae {train_mae[-1]}, Validation mae {val_mae[-1]}")
+                print(
+                    f"Iter {iter_count + 1}: Loss: {losses[-1]} Train mae {train_mae[-1]}, Validation mae {val_mae[-1]}")
             iter_count += 1
 
     if plot:
