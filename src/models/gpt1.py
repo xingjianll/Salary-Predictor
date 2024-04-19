@@ -159,6 +159,82 @@ def train_model(model,
         plot_results(iters, losses, train_mae, val_mae)
 
 
+def train_classifier(model,
+                train_data: GPT1Dataset,
+                val_data: GPT1Dataset,
+                learning_rate=0.01,
+                batch_size=100,
+                num_epochs=10,
+                plot_every=50,
+                plot=True):
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=_collate_batch)
+    train_loader2 = DataLoader(train_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
+    val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, collate_fn=_collate_batch)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+
+    iters, losses, train_mae, val_mae = [], [], [], []
+    iter_count = 0
+
+    for epoch in range(num_epochs):
+        model.train()
+        for input_ids, attention_mask, categorical_features, label in train_loader:
+            input_ids = input_ids
+            attention_mask = attention_mask
+            categorical_features = categorical_features
+            label = label
+
+            optimizer.zero_grad()
+            outputs = model(input_ids, attention_mask, categorical_features)
+            outputs = outputs.squeeze()
+            loss = criterion(outputs, label.type(torch.long))
+            loss.backward()
+            optimizer.step()
+
+            torch.cuda.empty_cache()
+
+            if (iter_count + 1) % plot_every == 0:
+                iters.append(iter_count)
+                losses.append(float(loss))
+                train_mae.append(calculate_accuracy(model, train_loader2))
+                val_mae.append(calculate_accuracy(model, val_loader))
+                print(
+                    f"Iter {iter_count + 1}: Loss: {losses[-1]} Train Acc: {train_mae[-1]}, Validation Acc: {val_mae[-1]}")
+            iter_count += 1
+
+    if plot:
+        plot_results(iters, losses, train_mae, val_mae)
+
+
+def calculate_accuracy(model, dataloader: DataLoader) -> float:
+    """
+    Calculate the accuracy for a model over a given dataloader.
+
+    Args:
+        model: The model to evaluate.
+        dataloader (DataLoader): The DataLoader containing the dataset.
+
+    Returns:
+        float: The accuracy of the model.
+    """
+    total_correct = 0
+    total_count = 0
+
+    with torch.no_grad():
+        for input_ids, attention_mask, categorical_features, labels in dataloader:
+            outputs = model(input_ids, attention_mask, categorical_features)
+            outputs = outputs.squeeze()  # Adjust shape if necessary
+
+            predictions = torch.argmax(outputs, dim=1)
+            total_correct += torch.sum(predictions == labels).item()
+            total_count += labels.size(0)
+            if total_count >= 1500:
+                break
+
+    return total_correct / total_count
+
+
 def calculate_mae(model, dataloader: DataLoader) -> float:
     """
     Calculate the mean absolute error for a model over a given dataloader.

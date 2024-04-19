@@ -112,6 +112,15 @@ def convert_to_one_hot(data: List[Tuple[List[str], Any]], vocabs: List[Tuple[int
         converted_data.append(one_hot_vectors)
     return converted_data
 
+def cat_emb(one_hot, data, emb_idx):
+    results = []
+    for i in range(len(data)):
+        strings = data[i][0][emb_idx].replace('[', '').replace(']', '').replace('\n', '').split()
+        floats = torch.tensor([float(item) for item in strings])
+        tensor = torch.cat((one_hot[i], floats))
+        results.append(tensor)
+    return results
+
 # def convert_to_one_hot(data, vocabs):
 #     converted_data = []
 #     # Assuming all records need the same number of classes in one-hot encoding
@@ -136,19 +145,31 @@ def convert_to_one_hot(data: List[Tuple[List[str], Any]], vocabs: List[Tuple[int
 
 def accuracy(model, dataset: Dataset) -> float:
     """
-    copied from csc413 lab 1
-    Compute the accuracy of `model` over the `dataset`.
-    We will take the **most probable class**
-    as the class predicted by the model.
+    Compute the Accuracy of `model` over the `dataset`.
 
     Parameters:
-        `model` - A torch.nn model. We will only be passing `nn.Linear` models.
-                  However, to make your code more generally useful, do not access
-                  `model.weight` and `model.bias` parameters directly. These
-                  class attributes may not exist for other kinds of models.
-        `dataset` - A list of 2-tuples of the form (x, t), where `x` is a PyTorch
-                  tensor of shape [1, 28, 28] representing an MNIST image,
-                  and `t` is the corresponding target label
+        `model` - A torch.nn model. 
+        `dataset` - A list of 2-tuples of the form (x, t)
+
+    Returns: a floating-point value between 0 and 1.
+    """
+    correct, total = 0, 0
+    loader = torch.utils.data.DataLoader(dataset, batch_size=100)
+    for x, t in loader:
+        z = model(x)
+        pred = torch.argmax(z, axis=1)
+        correct += int(torch.sum(t == pred))
+        total += t.shape[0]
+    return correct / total
+
+
+def mae(model, dataset: Dataset) -> float:
+    """
+    Compute the accuracy of `model` over the `dataset`.
+
+    Parameters:
+        `model` - A torch.nn model. 
+        `dataset` - A list of 2-tuples of the form (x, t)
 
     Returns: a floating-point value between 0 and 1.
     """
