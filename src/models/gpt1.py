@@ -180,11 +180,6 @@ def train_classifier(model,
     for epoch in range(num_epochs):
         model.train()
         for input_ids, attention_mask, categorical_features, label in train_loader:
-            input_ids = input_ids
-            attention_mask = attention_mask
-            categorical_features = categorical_features
-            label = label
-
             optimizer.zero_grad()
             outputs = model(input_ids, attention_mask, categorical_features)
             outputs = outputs.squeeze()
