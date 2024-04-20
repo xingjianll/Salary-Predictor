@@ -8,12 +8,15 @@ import torch
 from utils import accuracy, plot_results
 
 class Bert(nn.Module):
-    def __init__(self, num_categorical_features, hidden_size=100, output_size=1, dropout=0.1):
+    def __init__(self, num_categorical_features, hidden_size=100, output_size=1, dropout=0.1, fine_tune=True):
         super(Bert, self).__init__()
 
         config = AutoConfig.from_pretrained("bert-base-uncased")
 
         self.bert = AutoModel.from_pretrained("bert-base-uncased", config=config)
+        if not fine_tune:
+            for param in self.bert.parameters():
+                param.requires_grad = False
 
         self.linear1 = nn.Linear(config.hidden_size + num_categorical_features, hidden_size)
         self.relu = nn.ReLU()
