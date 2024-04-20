@@ -41,7 +41,7 @@ class MLP(nn.Module):
 
 class MLP_classifier(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes):
-        super(MLP, self).__init__()
+        super(MLP_classifier, self).__init__()
         self.linear1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.1)
