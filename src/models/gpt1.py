@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 
 from torch import nn, optim, Tensor
 from torch.utils.data import Dataset, DataLoader
-from transformers import OpenAIGPTModel
+from transformers import AutoConfig, AutoModel
 import torch
 
 from utils import accuracy, plot_results
@@ -30,69 +30,43 @@ class GPT1Dataset(Dataset):
         return len(self.labels)
 
 
+   
 class GPT1(nn.Module):
-    def __init__(self, num_categorical_features):
+    def __init__(self, num_categorical_features, hidden_size=100, output_size=1, dropout=0.1, fine_tune=True):
         super(GPT1, self).__init__()
 
-        self.gpt = OpenAIGPTModel.from_pretrained("openai-gpt")
+        config = AutoConfig.from_pretrained("openai-gpt")
 
-        self.fc1 = nn.Linear(self.gpt.config.hidden_size + num_categorical_features, 100)
+        self.bert = AutoModel.from_pretrained("openai-gpt", config=config)
+        if not fine_tune:
+            for param in self.bert.parameters():
+                param.requires_grad = False
+
+        self.linear1 = nn.Linear(config.hidden_size + num_categorical_features, hidden_size)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.1)
-        self.output = nn.Linear(100, 1)  # Output layer for salary prediction
+        self.dropout = nn.Dropout(dropout)
+        self.linear2 = nn.Linear(hidden_size, hidden_size)
+        self.output = nn.Linear(hidden_size, output_size)
 
     def forward(self, input_ids, attention_mask, categorical_features):
         # Process textual input through GPT
-        outputs = self.gpt(input_ids=input_ids, attention_mask=attention_mask)
+        bert_output = self.bert(input_ids=input_ids, attention_mask=attention_mask)
 
-        text_features = outputs.last_hidden_state[:, -1, :]  # Use the last token's representation
-
-        # Concatenate text features with categorical features
-        combined_features = torch.cat((text_features, categorical_features), dim=1)
-        combined_features = self.fc1(combined_features)
-
-        x = self.relu(combined_features)
-        x = self.dropout(x)
-        x = self.output(x)
-
-        return x
-    
-
-class GPT1_3LL(nn.Module):
-    def __init__(self, num_categorical_features):
-        super(GPT1, self).__init__()
-
-        self.gpt = OpenAIGPTModel.from_pretrained("openai-gpt")
-
-        self.relu = nn.ReLU()
-        self.fc1 = nn.Linear(self.gpt.config.hidden_size + num_categorical_features, 500)
-        self.fc2 = nn.Linear(self.gpt.config.hidden_size + num_categorical_features, 250)
-        self.fc3 = nn.Linear(self.gpt.config.hidden_size + num_categorical_features, 100)
-        self.dropout = nn.Dropout(0.1)
-        self.output = nn.Linear(100, 1)  # Output layer for salary prediction
-
-    def forward(self, input_ids, attention_mask, categorical_features):
-        # Process textual input through GPT
-        outputs = self.gpt(input_ids=input_ids, attention_mask=attention_mask)
-
-        text_features = outputs.last_hidden_state[:, -1, :]  # Use the last token's representation
+        seq_output = bert_output[0]  # (bs, seq_len, dim)
+        # mean pooling, i.e. getting average representation of all tokens
+        pooled_output = seq_output.mean(axis=1)  # (bs, dim)
+        pooled_output = self.dropout(pooled_output)  # (bs, dim)
 
         # Concatenate text features with categorical features
-        combined_features = torch.cat((text_features, categorical_features), dim=1)
-        combined_features = self.fc1(combined_features)
-        x = self.relu(combined_features)
-
-        x = self.fc2(x)
+        x = torch.cat((pooled_output, categorical_features), dim=1)
+        x = self.linear1(x)
         x = self.relu(x)
-        x = self.fc3(x)
+        x = self.dropout(x)
+        x = self.linear2(x)
         x = self.relu(x)
-
         x = self.dropout(x)
         x = self.output(x)
-
         return x
-
-
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

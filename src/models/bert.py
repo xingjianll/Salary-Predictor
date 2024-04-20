@@ -20,7 +20,7 @@ class Bert(nn.Module):
 
         self.linear1 = nn.Linear(config.hidden_size + num_categorical_features, hidden_size)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(dropout)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
         self.output = nn.Linear(hidden_size, output_size)
 
